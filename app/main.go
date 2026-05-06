@@ -15,7 +15,7 @@ func main() {
 }
 
 func homeHandler(w http.ResponseWriter, r *http.Request) {
-	fmt.Fprintln(w, "Hello from this side of the world!")
+	fmt.Fprintln(w, "Testing GitHub Actions")
 }
 
 func healthzHandler(w http.ResponseWriter, r *http.Request) {
