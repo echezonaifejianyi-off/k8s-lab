@@ -1,0 +1,49 @@
+---
+- name: Configure kubectl access for non-root user
+  hosts: k3s
+  become: true
+
+  vars:
+    kube_user: root
+    kube_user_home: /root
+
+  tasks:
+    - name: Create .kube directory for ubuntu user
+      ansible.builtin.file:
+        path: "{{ kube_user_home }}/.kube"
+        state: directory
+        owner: "{{ kube_user }}"
+        group: "{{ kube_user }}"
+        mode: "0755"
+
+    - name: Copy kubeconfig to ubuntu user's home
+      ansible.builtin.copy:
+        src: /etc/rancher/k3s/k3s.yaml
+        dest: "{{ kube_user_home }}/.kube/config"
+        remote_src: yes
+        owner: "{{ kube_user }}"
+        group: "{{ kube_user }}"
+        mode: "0600"
+
+    - name: Set KUBECONFIG in ubuntu's bashrc
+      ansible.builtin.lineinfile:
+        path: "{{ kube_user_home }}/.bashrc"
+        line: 'export KUBECONFIG={{ kube_user_home }}/.kube/config'
+        create: yes
+        owner: "{{ kube_user }}"
+        group: "{{ kube_user }}"
+
+    - name: Verify kubectl works without sudo
+      ansible.builtin.command:
+        cmd: kubectl get nodes
+      become: false
+      environment:
+        KUBECONFIG: "{{ kube_user_home }}/.kube/config"
+      register: node_status
+      retries: 5
+      delay: 5
+      until: node_status.rc == 0
+
+    - name: Print node status
+      ansible.builtin.debug:
+        msg: "{{ node_status.stdout }}"

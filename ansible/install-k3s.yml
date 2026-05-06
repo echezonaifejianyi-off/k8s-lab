@@ -1,0 +1,28 @@
+---
+- name: Install k3s on node
+  hosts: k3s
+  become: true
+
+  tasks:
+    - name: Download and run k3s installer
+      ansible.builtin.shell:
+        cmd: curl -sfL https://get.k3s.io | sh -
+        creates: /usr/local/bin/k3s
+
+    - name: Ensure k3s service is running and enabled
+      ansible.builtin.service:
+        name: k3s
+        state: started
+        enabled: true
+
+    - name: Verify node is ready
+      ansible.builtin.command:
+        cmd: kubectl get nodes --kubeconfig /etc/rancher/k3s/k3s.yaml
+      register: node_status
+      retries: 20
+      delay: 15
+      until: node_status.rc == 0
+
+    - name: Print node status
+      ansible.builtin.debug:
+        msg: "{{ node_status.stdout }}"
